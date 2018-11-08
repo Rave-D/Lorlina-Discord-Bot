@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Rave D. FxCop rules set" Description="Rave D. FxCop rules set" ToolsVersion="15.0">
+  <Include Path="allrules.ruleset" Action="Default" />
+  
+  <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
+
+	<!-- Do not use regions -->
+    <Rule Id="SA1124" Action="Hidden" />
+  
+	<!-- Field names must not begin with underscore -->
+    <Rule Id="SA1309" Action="Hidden" />
+	
+	<!-- File must have header -->
+    <Rule Id="SA1633" Action="Hidden" />
+  
+  </Rules>
+  
+</RuleSet>
