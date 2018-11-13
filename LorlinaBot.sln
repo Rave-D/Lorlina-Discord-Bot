@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution 
 		Solution items\StyleCop.json = Solution items\StyleCop.json
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LorlinaBot.Sandbox", "LorlinaBot.Sandbox\LorlinaBot.Sandbox.csproj", "{1542744A-9352-4342-8D49-2AA2238DEFCB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{21BA5331-1E99-430E-99B5-FCD75BC55F1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21BA5331-1E99-430E-99B5-FCD75BC55F1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21BA5331-1E99-430E-99B5-FCD75BC55F1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1542744A-9352-4342-8D49-2AA2238DEFCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1542744A-9352-4342-8D49-2AA2238DEFCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1542744A-9352-4342-8D49-2AA2238DEFCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1542744A-9352-4342-8D49-2AA2238DEFCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
