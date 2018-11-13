@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -11,6 +13,16 @@ namespace LorlinaBot.Discord
     public class DiscordClient : IDisposable
     {
         private DiscordSocketClient _client;
+
+        /// <summary>
+        /// Gets id of the server with which the client should interact.
+        /// </summary>
+        public ulong ConfiguredServerId { get; private set; }
+
+        /// <summary>
+        /// Gets all configured server text channels as dictionary with channel names as keys and channel ids as values.
+        /// </summary>
+        public Dictionary<string, ulong> TextChannels { get; private set; }
 
         #region Singleton
         #pragma warning disable SA1214 // Readonly fields must appear before non-readonly fields
@@ -69,24 +81,42 @@ namespace LorlinaBot.Discord
         /// Connect the instance of the DiscordClient class to the correct Discord bot.
         /// </summary>
         /// <param name="clientToken">Token of the bot you want to associated the DiscordClient instance to.</param>
+        /// <param name="serverId">Id of the server with which the client should interact with.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        public async Task StartClientAsync(string clientToken)
+        public async Task StartClientAsync(string clientToken, ulong serverId)
         {
             await this._client.LoginAsync(TokenType.Bot, clientToken).ConfigureAwait(false);
             await this._client.StartAsync().ConfigureAwait(false);
+
+            this.ConfiguredServerId = serverId;
+            this.TextChannels = new Dictionary<string, ulong>();
         }
 
-        private Task LogAsync(LogMessage log)
+        public async Task SendMessageAsync(ulong channelId, string message)
         {
-            Console.WriteLine(log.ToString());
-            return Task.CompletedTask;
         }
 
-        private Task ReadyAsync()
+        #region EventFunctions
+        private async Task LogAsync(LogMessage log)
         {
-            Console.WriteLine($"{this._client.CurrentUser} is connected!");
+            await Task.Run(() => Console.WriteLine($"#LOG: {log.ToString()}")).ConfigureAwait(false);
+        }
 
-            return Task.CompletedTask;
+        private async Task ReadyAsync()
+        {
+            Console.WriteLine($"#INFO: Bot {this._client.CurrentUser} is connected.");
+
+            var server = this._client.GetGuild(this.ConfiguredServerId);
+            if (server == null)
+            {
+                Console.WriteLine("#WARNING: didn't found configured server.");
+                return;
+            }
+
+            this.TextChannels = server.TextChannels
+                .GroupBy(tc => tc.Name)
+                .ToDictionary(tc => tc.Key, tc => tc.First().Id);
+            Console.WriteLine($"#INFO: {this.TextChannels.Count} text channels found on connection.");
         }
 
         private async Task MessageReceivedAsync(SocketMessage message)
