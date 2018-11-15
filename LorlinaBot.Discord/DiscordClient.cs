@@ -98,8 +98,22 @@ namespace LorlinaBot.Discord
             this.TextChannels = new Dictionary<string, ulong>();
         }
 
+        /// <summary>
+        /// Sends a specific message to the given channel.
+        /// </summary>
+        /// <param name="channelId">Id of the channel on which you want to send message.</param>
+        /// <param name="message">Message to send.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         public async Task SendMessageAsync(ulong channelId, string message)
         {
+            var channel = this._client.GetChannel(channelId);
+
+            if (channel.GetType() == typeof(SocketTextChannel))
+            {
+                var textChannel = (SocketTextChannel)channel;
+
+                await textChannel.SendMessageAsync(message).ConfigureAwait(false);
+            }
         }
 
         #region EventFunctions
