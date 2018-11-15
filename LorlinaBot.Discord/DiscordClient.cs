@@ -14,6 +14,8 @@ namespace LorlinaBot.Discord
     {
         private DiscordSocketClient _client;
 
+        private bool _isStarted;
+
         /// <summary>
         /// Gets id of the server with which the client should interact.
         /// </summary>
@@ -46,6 +48,8 @@ namespace LorlinaBot.Discord
             this._client.ChannelCreated += this.ChannelCreatedAsync;
             this._client.ChannelUpdated += this.ChannelUpdateAsync;
             this._client.ChannelDestroyed += this.ChannelDestroyedAsync;
+
+            this._isStarted = false;
         }
         #pragma warning restore SA1214 // Readonly fields must appear before non-readonly fields
         #endregion Singleton
@@ -69,6 +73,11 @@ namespace LorlinaBot.Discord
         {
             if (disposing)
             {
+                if (this._isStarted)
+                {
+                    this.StopClientAsync().GetAwaiter().GetResult();
+                }
+
                 this._client.Log -= this.LogAsync;
                 this._client.Ready -= this.ReadyAsync;
                 this._client.MessageReceived -= this.MessageReceivedAsync;
@@ -76,7 +85,6 @@ namespace LorlinaBot.Discord
                 this._client.ChannelUpdated -= this.ChannelUpdateAsync;
                 this._client.ChannelDestroyed -= this.ChannelDestroyedAsync;
 
-                this._client.StopAsync();
                 this._client.Dispose();
             }
         }
@@ -91,11 +99,31 @@ namespace LorlinaBot.Discord
         /// <returns>A task that represents the asynchronous operation.</returns>
         public async Task StartClientAsync(string clientToken, ulong serverId)
         {
-            await this._client.LoginAsync(TokenType.Bot, clientToken).ConfigureAwait(false);
-            await this._client.StartAsync().ConfigureAwait(false);
+            if (!this._isStarted)
+            {
+                await this._client.LoginAsync(TokenType.Bot, clientToken).ConfigureAwait(false);
+                await this._client.StartAsync().ConfigureAwait(false);
 
-            this.ConfiguredServerId = serverId;
-            this.TextChannels = new Dictionary<string, ulong>();
+                this.ConfiguredServerId = serverId;
+                this.TextChannels = new Dictionary<string, ulong>();
+
+                this._isStarted = true;
+            }
+        }
+
+        /// <summary>
+        /// Disconnect the instance of the DiscordClient.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        public async Task StopClientAsync()
+        {
+            if (this._isStarted)
+            {
+                await this._client.StopAsync().ConfigureAwait(false);
+                await this._client.LogoutAsync().ConfigureAwait(false);
+
+                this._isStarted = false;
+            }
         }
 
         /// <summary>
