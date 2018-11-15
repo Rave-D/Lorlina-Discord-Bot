@@ -43,6 +43,9 @@ namespace LorlinaBot.Discord
             this._client.Log += this.LogAsync;
             this._client.Ready += this.ReadyAsync;
             this._client.MessageReceived += this.MessageReceivedAsync;
+            this._client.ChannelCreated += this.ChannelCreatedAsync;
+            this._client.ChannelUpdated += this.ChannelUpdateAsync;
+            this._client.ChannelDestroyed += this.ChannelDestroyedAsync;
         }
         #pragma warning restore SA1214 // Readonly fields must appear before non-readonly fields
         #endregion Singleton
@@ -69,6 +72,9 @@ namespace LorlinaBot.Discord
                 this._client.Log -= this.LogAsync;
                 this._client.Ready -= this.ReadyAsync;
                 this._client.MessageReceived -= this.MessageReceivedAsync;
+                this._client.ChannelCreated -= this.ChannelCreatedAsync;
+                this._client.ChannelUpdated -= this.ChannelUpdateAsync;
+                this._client.ChannelDestroyed -= this.ChannelDestroyedAsync;
 
                 this._client.StopAsync();
                 this._client.Dispose();
@@ -132,5 +138,54 @@ namespace LorlinaBot.Discord
                 await message.Channel.SendMessageAsync("pong!").ConfigureAwait(false);
             }
         }
+
+        private async Task ChannelCreatedAsync(SocketChannel newChannel)
+        {
+            if (newChannel.GetType() == typeof(SocketTextChannel))
+            {
+                var newTextChannel = (SocketTextChannel)newChannel;
+
+                if (this.TextChannels.ContainsKey(newTextChannel.Name))
+                {
+                    Console.WriteLine($"#WARNING: text channel \"{newTextChannel.Name}\" already exists, you won't be able to use bot function by using its name.");
+                }
+                else
+                {
+                    await Task.Run(() => this.TextChannels.Add(newTextChannel.Name, newTextChannel.Id)).ConfigureAwait(false);
+                    Console.WriteLine($"#INFO: \"{newTextChannel.Name}\" added to text channels list.");
+                }
+            }
+        }
+
+        private async Task ChannelUpdateAsync(SocketChannel outdatedChannel, SocketChannel updatedChannel)
+        {
+            if (outdatedChannel.GetType() == typeof(SocketTextChannel))
+            {
+                var outdatedTextChannel = (SocketTextChannel)outdatedChannel;
+                var updatedTextChannel = (SocketTextChannel)updatedChannel;
+
+                if (outdatedTextChannel.Name != updatedTextChannel.Name)
+                {
+                    await this.ChannelDestroyedAsync(outdatedChannel).ConfigureAwait(false);
+                    await this.ChannelCreatedAsync(updatedChannel).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private async Task ChannelDestroyedAsync(SocketChannel destroyedChannel)
+        {
+            if (destroyedChannel.GetType() == typeof(SocketTextChannel))
+            {
+                var destroyedTextChannel = (SocketTextChannel)destroyedChannel;
+
+                if (this.TextChannels.ContainsKey(destroyedTextChannel.Name)
+                    && this.TextChannels[destroyedTextChannel.Name] == destroyedTextChannel.Id)
+                {
+                    await Task.Run(() => this.TextChannels.Remove(destroyedTextChannel.Name)).ConfigureAwait(false);
+                    Console.WriteLine($"#INFO: \"{destroyedTextChannel.Name}\" removed from text channels list.");
+                }
+            }
+        }
+        #endregion EventFunctions
     }
 }
