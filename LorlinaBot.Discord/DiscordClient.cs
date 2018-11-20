@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using LorlinaBot.Discord.Models;
 
 namespace LorlinaBot.Discord
 {
@@ -17,12 +18,9 @@ namespace LorlinaBot.Discord
 
         private DiscordSocketClient _client;
 
-        private bool _isStarted;
+        private ClientConfiguration _configuration;
 
-        /// <summary>
-        /// Gets id of the server with which the client should interact.
-        /// </summary>
-        public ulong ConfiguredServerId { get; private set; }
+        private bool _isStarted;
 
         /// <summary>
         /// Gets all configured server text channels as dictionary with channel names as keys and channel ids as values.
@@ -103,16 +101,16 @@ namespace LorlinaBot.Discord
         /// Connect the instance of the DiscordClient class to the correct Discord bot.
         /// </summary>
         /// <param name="clientToken">Token of the bot you want to associated the DiscordClient instance to.</param>
-        /// <param name="serverId">Id of the server with which the client should interact with.</param>
+        /// <param name="configuration">Configuration of the client.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        public async Task StartClientAsync(string clientToken, ulong serverId)
+        public async Task StartClientAsync(string clientToken, ClientConfiguration configuration)
         {
             if (!this._isStarted)
             {
                 await this._client.LoginAsync(TokenType.Bot, clientToken).ConfigureAwait(false);
                 await this._client.StartAsync().ConfigureAwait(false);
 
-                this.ConfiguredServerId = serverId;
+                this._configuration = configuration;
                 this.TextChannels = new Dictionary<string, ulong>();
                 this.VoiceChannels = new Dictionary<string, ulong>();
 
@@ -163,7 +161,7 @@ namespace LorlinaBot.Discord
         {
             Console.WriteLine($"#INFO: Bot {this._client.CurrentUser} is connected.");
 
-            var server = this._client.GetGuild(this.ConfiguredServerId);
+            var server = this._client.GetGuild(this._configuration.ConfiguredServerId);
             if (server == null)
             {
                 Console.WriteLine("#WARNING: didn't found configured server.");
@@ -179,6 +177,13 @@ namespace LorlinaBot.Discord
                 .GroupBy(tc => tc.Name)
                 .ToDictionary(tc => tc.Key, tc => tc.First().Id);
             Console.WriteLine($"#INFO: {this.VoiceChannels.Count} voice channels found on connection.");
+
+            if (this._configuration.ClientConnectedMessage != null
+                && this._configuration.NotificationChannelName != null
+                && this.TextChannels.ContainsKey(this._configuration.NotificationChannelName))
+            {
+                await this.SendMessageAsync(this.TextChannels[this._configuration.NotificationChannelName], this._configuration.ClientConnectedMessage).ConfigureAwait(false);
+            }
         }
 
         private async Task MessageReceivedAsync(SocketMessage message)

@@ -10,6 +10,9 @@
 	<!-- Field names must not begin with underscore -->
     <Rule Id="SA1309" Action="Hidden" />
 	
+	<!-- Field names must not contain underscore -->
+    <Rule Id="SA1310" Action="Hidden" />
+	
 	<!-- File must have header -->
     <Rule Id="SA1633" Action="Hidden" />
   

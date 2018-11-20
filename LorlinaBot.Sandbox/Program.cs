@@ -16,7 +16,11 @@
 
         private static async Task MainAsync(string[] args)
         {
-            await DiscordClient.Instance.StartClientAsync(DISCORDBOT_TOKEN, SERVER_ID).ConfigureAwait(false);
+            var config = new ClientConfiguration
+            {
+                ConfiguredServerId = SERVER_ID
+            };
+            await DiscordClient.Instance.StartClientAsync(DISCORDBOT_TOKEN, config).ConfigureAwait(false);
 
             // Block the program until it is closed.
             await Task.Delay(-1).ConfigureAwait(false);
