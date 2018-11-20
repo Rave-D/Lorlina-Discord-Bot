@@ -12,6 +12,9 @@ namespace LorlinaBot.Discord
     /// </summary>
     public class DiscordClient : IDisposable
     {
+        private const string CHANNELTYPE_TEXT = "text channel";
+        private const string CHANNELTYPE_VOICE = "voice channel";
+
         private DiscordSocketClient _client;
 
         private bool _isStarted;
@@ -25,6 +28,11 @@ namespace LorlinaBot.Discord
         /// Gets all configured server text channels as dictionary with channel names as keys and channel ids as values.
         /// </summary>
         public Dictionary<string, ulong> TextChannels { get; private set; }
+
+        /// <summary>
+        /// Gets all configured server voices channels as dictionary with channel names as keys and channel ids as values.
+        /// </summary>
+        public Dictionary<string, ulong> VoiceChannels { get; private set; }
 
         #region Singleton
         #pragma warning disable SA1214 // Readonly fields must appear before non-readonly fields
@@ -106,6 +114,7 @@ namespace LorlinaBot.Discord
 
                 this.ConfiguredServerId = serverId;
                 this.TextChannels = new Dictionary<string, ulong>();
+                this.VoiceChannels = new Dictionary<string, ulong>();
 
                 this._isStarted = true;
             }
@@ -165,6 +174,11 @@ namespace LorlinaBot.Discord
                 .GroupBy(tc => tc.Name)
                 .ToDictionary(tc => tc.Key, tc => tc.First().Id);
             Console.WriteLine($"#INFO: {this.TextChannels.Count} text channels found on connection.");
+
+            this.VoiceChannels = server.VoiceChannels
+                .GroupBy(tc => tc.Name)
+                .ToDictionary(tc => tc.Key, tc => tc.First().Id);
+            Console.WriteLine($"#INFO: {this.VoiceChannels.Count} voice channels found on connection.");
         }
 
         private async Task MessageReceivedAsync(SocketMessage message)
@@ -186,31 +200,43 @@ namespace LorlinaBot.Discord
             if (newChannel.GetType() == typeof(SocketTextChannel))
             {
                 var newTextChannel = (SocketTextChannel)newChannel;
-
-                if (this.TextChannels.ContainsKey(newTextChannel.Name))
-                {
-                    Console.WriteLine($"#WARNING: text channel \"{newTextChannel.Name}\" already exists, you won't be able to use bot function by using its name.");
-                }
-                else
-                {
-                    await Task.Run(() => this.TextChannels.Add(newTextChannel.Name, newTextChannel.Id)).ConfigureAwait(false);
-                    Console.WriteLine($"#INFO: \"{newTextChannel.Name}\" added to text channels list.");
-                }
+                await Task.Run(() => this.AddChannelToDictionary(newTextChannel.Name, newTextChannel.Id, this.TextChannels, CHANNELTYPE_TEXT)).ConfigureAwait(false);
+            }
+            else if (newChannel.GetType() == typeof(SocketVoiceChannel))
+            {
+                var newVoiceChannel = (SocketVoiceChannel)newChannel;
+                await Task.Run(() => this.AddChannelToDictionary(newVoiceChannel.Name, newVoiceChannel.Id, this.VoiceChannels, CHANNELTYPE_VOICE)).ConfigureAwait(false);
             }
         }
 
         private async Task ChannelUpdateAsync(SocketChannel outdatedChannel, SocketChannel updatedChannel)
         {
+            string outdatedChannelName = null;
+            string updatedChannelName = null;
+
             if (outdatedChannel.GetType() == typeof(SocketTextChannel))
             {
                 var outdatedTextChannel = (SocketTextChannel)outdatedChannel;
                 var updatedTextChannel = (SocketTextChannel)updatedChannel;
+                outdatedChannelName = outdatedTextChannel.Name;
+                updatedChannelName = updatedTextChannel.Name;
+            }
+            else if (outdatedChannel.GetType() == typeof(SocketVoiceChannel))
+            {
+                var outdatedVoiceChannel = (SocketVoiceChannel)outdatedChannel;
+                var updatedVoiceChannel = (SocketVoiceChannel)updatedChannel;
+                outdatedChannelName = outdatedVoiceChannel.Name;
+                updatedChannelName = updatedVoiceChannel.Name;
+            }
+            else
+            {
+                return;
+            }
 
-                if (outdatedTextChannel.Name != updatedTextChannel.Name)
-                {
-                    await this.ChannelDestroyedAsync(outdatedChannel).ConfigureAwait(false);
-                    await this.ChannelCreatedAsync(updatedChannel).ConfigureAwait(false);
-                }
+            if (outdatedChannelName != updatedChannelName)
+            {
+                await this.ChannelDestroyedAsync(outdatedChannel).ConfigureAwait(false);
+                await this.ChannelCreatedAsync(updatedChannel).ConfigureAwait(false);
             }
         }
 
@@ -219,15 +245,39 @@ namespace LorlinaBot.Discord
             if (destroyedChannel.GetType() == typeof(SocketTextChannel))
             {
                 var destroyedTextChannel = (SocketTextChannel)destroyedChannel;
-
-                if (this.TextChannels.ContainsKey(destroyedTextChannel.Name)
-                    && this.TextChannels[destroyedTextChannel.Name] == destroyedTextChannel.Id)
-                {
-                    await Task.Run(() => this.TextChannels.Remove(destroyedTextChannel.Name)).ConfigureAwait(false);
-                    Console.WriteLine($"#INFO: \"{destroyedTextChannel.Name}\" removed from text channels list.");
-                }
+                await Task.Run(() => this.RemoveChannelFromDictionary(destroyedTextChannel.Name, destroyedTextChannel.Id, this.TextChannels, CHANNELTYPE_TEXT)).ConfigureAwait(false);
+            }
+            else if (destroyedChannel.GetType() == typeof(SocketVoiceChannel))
+            {
+                var destroyedVoiceChannel = (SocketVoiceChannel)destroyedChannel;
+                await Task.Run(() => this.RemoveChannelFromDictionary(destroyedVoiceChannel.Name, destroyedVoiceChannel.Id, this.VoiceChannels, CHANNELTYPE_VOICE)).ConfigureAwait(false);
             }
         }
         #endregion EventFunctions
+
+        #region ChannelsManager
+        private void AddChannelToDictionary(string channelName, ulong channelId, Dictionary<string, ulong> dictionary, string channelType)
+        {
+            if (dictionary.ContainsKey(channelName))
+            {
+                Console.WriteLine($"#WARNING: {channelType} \"{channelName}\" already exists, you won't be able to use bot function by using its name.");
+            }
+            else
+            {
+                dictionary.Add(channelName, channelId);
+                Console.WriteLine($"#INFO: \"{channelName}\" added to {channelType} list.");
+            }
+        }
+
+        private void RemoveChannelFromDictionary(string channelName, ulong channelId, Dictionary<string, ulong> dictionary, string channelType)
+        {
+            if (dictionary.ContainsKey(channelName)
+                    && dictionary[channelName] == channelId)
+            {
+                dictionary.Remove(channelName);
+                Console.WriteLine($"#INFO: \"{channelName}\" removed from {channelType} list.");
+            }
+        }
+        #endregion ChannelsManager
     }
 }
